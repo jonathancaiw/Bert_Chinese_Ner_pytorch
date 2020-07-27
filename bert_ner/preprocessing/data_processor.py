@@ -2,6 +2,8 @@ import os
 import json
 import random
 from collections import Counter
+from datetime import datetime
+import torch
 from tqdm import tqdm
 from util.Logginger import init_logger
 import config.args as args
@@ -89,16 +91,30 @@ def bulid_vocab(vocab_size, min_freq=1, stop_word_list=None):
 def produce_data(custom_vocab=False, stop_word_list=None, vocab_size=None):
     """实际情况下，train和valid通常是需要自己划分的，这里将train和valid数据集划分好写入文件"""
     targets, sentences = [],[]
-    with open(os.path.join(args.ROOT_DIR, args.RAW_SOURCE_DATA), 'r') as fr_1, \
-            open(os.path.join(args.ROOT_DIR, args.RAW_TARGET_DATA), 'r') as fr_2:
-        for sent, target in tqdm(zip(fr_1, fr_2), desc='text_to_id'):
-            chars = sent2char(sent)
-            label = sent2char(target)
 
-            targets.append(label)
-            sentences.append(chars)
-            if custom_vocab:
-                bulid_vocab(vocab_size, stop_word_list)
+    start_time = datetime.now()
+    if (os.path.exists('../data/targets.pt') and os.path.exists('../data/sentences.pt')):
+        targets = torch.load('../data/targets.pt')
+        sentences = torch.load('../data/sentences.pt')
+    else:
+        with open(os.path.join(args.ROOT_DIR, args.RAW_SOURCE_DATA), 'r') as fr_1, \
+                open(os.path.join(args.ROOT_DIR, args.RAW_TARGET_DATA), 'r') as fr_2:
+            for sent, target in tqdm(zip(fr_1, fr_2), desc='text_to_id'):
+                chars = sent2char(sent)
+                label = sent2char(target)
+
+                targets.append(label)
+                sentences.append(chars)
+                if custom_vocab:
+                    bulid_vocab(vocab_size, stop_word_list)
+
+        fr_1.close()
+        fr_2.close()
+
+        torch.save(targets, '../data/targets.pt')
+        torch.save(sentences, '../data/sentences.pt')
+    print("load data cost: %s" % (datetime.now() - start_time))
+
     train, valid = train_val_split(sentences, targets)
 
 
