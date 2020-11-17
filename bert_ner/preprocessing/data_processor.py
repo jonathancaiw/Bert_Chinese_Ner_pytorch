@@ -66,19 +66,19 @@ def bulid_vocab(vocab_size, min_freq=1, stop_word_list=None):
     if stop_word_list:
         stop_list = {}
         with open(os.path.join(args.ROOT_DIR, args.STOP_WORD_LIST), 'r') as fr:
-                for i, line in enumerate(fr):
-                    word = line.strip('\n')
-                    if stop_list.get(word) is None:
-                        stop_list[word] = i
+            for i, line in enumerate(fr):
+                word = line.strip('\n')
+                if stop_list.get(word) is None:
+                    stop_list[word] = i
         count = {k: v for k, v in count.items() if k not in stop_list}
     count = sorted(count.items(), key=operator.itemgetter(1))
     # 词典
     vocab = [w[0] for w in count if w[1] >= min_freq]
-    if vocab_size-3 < len(vocab):
-        vocab = vocab[:vocab_size-3]
+    if vocab_size - 3 < len(vocab):
+        vocab = vocab[:vocab_size - 3]
     vocab = args.flag_words + vocab
     assert vocab[0] == "[PAD]", ("[PAD] is not at the first position of vocab")
-    logger.info('Vocab_size is %d'%len(vocab))
+    logger.info('Vocab_size is %d' % len(vocab))
 
     with open(args.VOCAB_FILE, 'w') as fw:
         for w in vocab:
@@ -87,10 +87,13 @@ def bulid_vocab(vocab_size, min_freq=1, stop_word_list=None):
 
 
 def produce_data(custom_vocab=False, stop_word_list=None, vocab_size=None):
+    if os.path.exists(args.TRAIN) and os.path.exists(args.VALID):
+        return
+
     """实际情况下，train和valid通常是需要自己划分的，这里将train和valid数据集划分好写入文件"""
-    targets, sentences = [],[]
-    with open(os.path.join(args.ROOT_DIR, args.RAW_SOURCE_DATA), 'r') as fr_1, \
-            open(os.path.join(args.ROOT_DIR, args.RAW_TARGET_DATA), 'r') as fr_2:
+    targets, sentences = [], []
+    with open(os.path.join(args.ROOT_DIR, args.RAW_SOURCE_DATA), 'r', encoding='utf-8') as fr_1, \
+            open(os.path.join(args.ROOT_DIR, args.RAW_TARGET_DATA), 'r', encoding='utf-8') as fr_2:
         for sent, target in tqdm(zip(fr_1, fr_2), desc='text_to_id'):
             chars = sent2char(sent)
             label = sent2char(target)
@@ -101,8 +104,7 @@ def produce_data(custom_vocab=False, stop_word_list=None, vocab_size=None):
                 bulid_vocab(vocab_size, stop_word_list)
     train, valid = train_val_split(sentences, targets)
 
-
-    with open(args.TRAIN, 'w') as fw:
+    with open(args.TRAIN, 'w', encoding='utf-8') as fw:
         for sent, label in train:
             sent = ' '.join([str(w) for w in sent])
             label = ' '.join([str(l) for l in label])
@@ -111,7 +113,7 @@ def produce_data(custom_vocab=False, stop_word_list=None, vocab_size=None):
             print(encode_json, file=fw)
         logger.info('Train set write done')
 
-    with open(args.VALID, 'w') as fw:
+    with open(args.VALID, 'w', encoding='utf-8') as fw:
         for sent, label in valid:
             sent = ' '.join([str(w) for w in sent])
             label = ' '.join([str(l) for l in label])
@@ -147,6 +149,7 @@ class InputFeature(object):
 
 class DataProcessor(object):
     """数据预处理的基类，自定义的MyPro继承该类"""
+
     def get_train_examples(self, data_dir):
         """读取训练集 Gets a collection of `InputExample`s for the train set."""
         raise NotImplementedError()
@@ -171,6 +174,7 @@ class DataProcessor(object):
 
 class MyPro(DataProcessor):
     """将数据构造成example格式"""
+
     def _create_example(self, lines, set_type):
         examples = []
         for i, line in enumerate(lines):
@@ -203,7 +207,7 @@ def convert_examples_to_features(examples, label_list, max_seq_length, tokenizer
 
     # load sub_vocab
     sub_vocab = {}
-    with open(args.VOCAB_FILE, 'r') as fr:
+    with open(args.VOCAB_FILE, 'r', encoding='utf-8') as fr:
         for line in fr:
             _line = line.strip('\n')
             if "##" in _line and sub_vocab.get(_line) is None:
@@ -213,13 +217,13 @@ def convert_examples_to_features(examples, label_list, max_seq_length, tokenizer
     for ex_index, example in enumerate(examples):
         tokens_a = tokenizer.tokenize(example.text_a)
         labels = example.label.split()
-        
-        if len(tokens_a)==0 or len(labels)==0:
+
+        if len(tokens_a) == 0 or len(labels) == 0:
             continue
-            
+
         if len(tokens_a) > max_seq_length - 2:
-            tokens_a = tokens_a[:(max_seq_length-2)]
-            labels = labels[:(max_seq_length-2)]
+            tokens_a = tokens_a[:(max_seq_length - 2)]
+            labels = labels[:(max_seq_length - 2)]
         # ----------------处理source--------------
         ## 句子首尾加入标示符
         tokens = ["[CLS]"] + tokens_a + ["[SEP]"]
@@ -242,7 +246,7 @@ def convert_examples_to_features(examples, label_list, max_seq_length, tokenizer
         # ---------------处理target----------------
         ## Notes: label_id中不包括[CLS]和[SEP]
         label_id = [label_map[l] for l in labels]
-        label_padding = [-1] * (max_seq_length-len(label_id))
+        label_padding = [-1] * (max_seq_length - len(label_id))
         label_id += label_padding
 
         ## output_mask用来过滤bert输出中sub_word的输出,只保留单词的第一个输出(As recommended by jocob in his paper)
@@ -280,5 +284,3 @@ def convert_examples_to_features(examples, label_list, max_seq_length, tokenizer
         features.append(feature)
 
     return features
-
-
