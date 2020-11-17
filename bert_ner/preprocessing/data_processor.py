@@ -105,7 +105,7 @@ def produce_data(custom_vocab=False, stop_word_list=None, vocab_size=None):
     train, valid = train_val_split(sentences, targets)
 
     with open(args.TRAIN, 'w', encoding='utf-8') as fw:
-        for sent, label in train:
+        for sent, label in tqdm(train):
             sent = ' '.join([str(w) for w in sent])
             label = ' '.join([str(l) for l in label])
             df = {"source": sent, "target": label}
@@ -114,7 +114,7 @@ def produce_data(custom_vocab=False, stop_word_list=None, vocab_size=None):
         logger.info('Train set write done')
 
     with open(args.VALID, 'w', encoding='utf-8') as fw:
-        for sent, label in valid:
+        for sent, label in tqdm(valid):
             sent = ' '.join([str(w) for w in sent])
             label = ' '.join([str(l) for l in label])
             df = {"source": sent, "target": label}
