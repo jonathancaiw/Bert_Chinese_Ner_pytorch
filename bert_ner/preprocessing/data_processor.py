@@ -87,9 +87,6 @@ def bulid_vocab(vocab_size, min_freq=1, stop_word_list=None):
 
 
 def produce_data(custom_vocab=False, stop_word_list=None, vocab_size=None):
-    if os.path.exists(args.TRAIN) and os.path.exists(args.VALID):
-        return
-
     """实际情况下，train和valid通常是需要自己划分的，这里将train和valid数据集划分好写入文件"""
     targets, sentences = [], []
     with open(os.path.join(args.ROOT_DIR, args.RAW_SOURCE_DATA), 'r', encoding='utf-8') as fr_1, \
@@ -214,7 +211,7 @@ def convert_examples_to_features(examples, label_list, max_seq_length, tokenizer
                 sub_vocab[_line] = 1
 
     features = []
-    for ex_index, example in enumerate(examples):
+    for ex_index, example in enumerate(tqdm(examples)):
         tokens_a = tokenizer.tokenize(example.text_a)
         labels = example.label.split()
 
