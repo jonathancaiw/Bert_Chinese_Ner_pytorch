@@ -6,7 +6,7 @@ from preprocessing.data_processor import MyPro, convert_examples_to_features
 import config.args as args
 from util.Logginger import init_logger
 
-logger = init_logger("bert_ner",logging_path=args.log_path)
+logger = init_logger("bert_ner", logging_path=args.log_path)
 
 
 def init_params():
@@ -46,7 +46,6 @@ def create_batch_iter(mode):
     logger.info("  Num examples = %d", len(examples))
     logger.info("  Batch size = %d", batch_size)
 
-
     all_input_ids = torch.tensor([f.input_ids for f in features], dtype=torch.long)
     all_input_mask = torch.tensor([f.input_mask for f in features], dtype=torch.long)
     all_segment_ids = torch.tensor([f.segment_ids for f in features], dtype=torch.long)
@@ -67,10 +66,10 @@ def create_batch_iter(mode):
     iterator = DataLoader(data, sampler=sampler, batch_size=batch_size)
 
     if mode == "train":
+        torch.save((iterator, num_train_steps), args.TRAIN_CACHE)
         return iterator, num_train_steps
     elif mode == "dev":
+        torch.save(iterator, args.VALID_CACHE)
         return iterator
     else:
         raise ValueError("Invalid mode %s" % mode)
-
-

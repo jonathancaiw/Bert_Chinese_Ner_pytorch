@@ -1,5 +1,6 @@
 import time
 import torch
+from tqdm import tqdm
 from pytorch_pretrained_bert.optimization import BertAdam
 
 import config.args as args
@@ -14,12 +15,13 @@ torch.manual_seed(args.seed)
 torch.cuda.manual_seed(args.seed)
 torch.cuda.manual_seed_all(args.seed)
 import warnings
+
 warnings.filterwarnings('ignore')
 
 
 def warmup_linear(x, warmup=0.002):
     if x < warmup:
-        return x/warmup
+        return x / warmup
     return 1.0 - x
 
 
@@ -78,13 +80,13 @@ def fit(model, training_iter, eval_iter, num_epoch, pbar, num_train_steps, verbo
         "eval_acc": eval_accuracy
     }
 
-# ------------------------训练------------------------------
+    # ------------------------训练------------------------------
     best_f1 = 0
     start = time.time()
     global_step = 0
     for e in range(num_epoch):
         model.train()
-        for step, batch in enumerate(training_iter):
+        for step, batch in enumerate(tqdm(training_iter)):
             batch = tuple(t.to(device) for t in batch)
             input_ids, input_mask, segment_ids, label_ids, output_mask = batch
             # print("input_id", input_ids)
@@ -118,26 +120,25 @@ def fit(model, training_iter, eval_iter, num_epoch, pbar, num_train_steps, verbo
             train_acc, f1 = model.acc_f1(predicts, label_ids)
             pbar.show_process(train_acc, train_loss.item(), f1, time.time() - start, step)
 
-# -----------------------验证----------------------------
+        # -----------------------验证----------------------------
         model.eval()
         count = 0
         y_predicts, y_labels = [], []
         eval_loss, eval_acc, eval_f1 = 0, 0, 0
         with torch.no_grad():
-            for step, batch in enumerate(eval_iter):
+            for step, batch in enumerate(tqdm(eval_iter)):
                 batch = tuple(t.to(device) for t in batch)
                 input_ids, input_mask, segment_ids, label_ids, output_mask = batch
                 bert_encode = model(input_ids, segment_ids, input_mask).cpu()
                 eval_los = model.loss_fn(bert_encode=bert_encode, tags=label_ids, output_mask=output_mask)
                 eval_loss = eval_los + eval_loss
                 count += 1
-                predicts =  model.predict(bert_encode, output_mask)
+                predicts = model.predict(bert_encode, output_mask)
                 y_predicts.append(predicts)
 
                 label_ids = label_ids.view(1, -1)
                 label_ids = label_ids[label_ids != -1]
                 y_labels.append(label_ids)
-
 
             eval_predicted = torch.cat(y_predicts, dim=0).cpu()
             eval_labeled = torch.cat(y_labels, dim=0).cpu()
@@ -149,7 +150,7 @@ def fit(model, training_iter, eval_iter, num_epoch, pbar, num_train_steps, verbo
                 '\n\nEpoch %d - train_loss: %4f - eval_loss: %4f - train_acc:%4f - eval_acc:%4f - eval_f1:%4f\n'
                 % (e + 1,
                    train_loss.item(),
-                   eval_loss.item()/count,
+                   eval_loss.item() / count,
                    train_acc,
                    eval_acc,
                    eval_f1))
@@ -162,7 +163,7 @@ def fit(model, training_iter, eval_iter, num_epoch, pbar, num_train_steps, verbo
             if e % verbose == 0:
                 train_losses.append(train_loss.item())
                 train_accuracy.append(train_acc)
-                eval_losses.append(eval_loss.item()/count)
+                eval_losses.append(eval_loss.item() / count)
                 eval_accuracy.append(eval_acc)
 
     loss_acc_plot(history)
