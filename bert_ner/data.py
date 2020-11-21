@@ -1,5 +1,4 @@
 import torch
-from sklearn.model_selection import train_test_split
 from tqdm import tqdm
 import config.args as args
 
@@ -91,11 +90,6 @@ def generate_dataset(filename):
     x, y = trim_dataset(x, y, args.max_seq_length - 2)
 
     torch.save((x, y), 'data/label.pt')
-
-
-def get_train_test_dataset(x, y, test_size, shuffle=True):
-    """拆分训练集与测试集"""
-    return train_test_split(x, y, test_size=test_size, shuffle=shuffle)
 
 
 if __name__ == '__main__':
