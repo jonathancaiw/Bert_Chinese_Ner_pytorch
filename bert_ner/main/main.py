@@ -7,11 +7,13 @@ import config.args as args
 from util.porgress_util import ProgressBar
 from preprocessing.data_processor import produce_data
 
+USER_DEFINE = False
+
 
 def start():
     # 优先使用缓存
     if not os.path.exists(args.TRAIN) or not os.path.exists(args.VALID):
-        produce_data()
+        produce_data(user_define=USER_DEFINE)
 
     if os.path.exists(args.TRAIN_CACHE):
         train_iter, num_train_steps = torch.load(args.TRAIN_CACHE)

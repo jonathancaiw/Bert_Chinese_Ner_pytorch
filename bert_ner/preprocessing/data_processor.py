@@ -2,6 +2,7 @@ import os
 import json
 import random
 from collections import Counter
+import torch
 from tqdm import tqdm
 from util.Logginger import init_logger
 import config.args as args
@@ -86,25 +87,28 @@ def bulid_vocab(vocab_size, min_freq=1, stop_word_list=None):
     logger.info("Vocab.txt write down at {}".format(args.VOCAB_FILE))
 
 
-def produce_data(custom_vocab=False, stop_word_list=None, vocab_size=None):
+def produce_data(custom_vocab=False, stop_word_list=None, vocab_size=None, user_define=False):
     """实际情况下，train和valid通常是需要自己划分的，这里将train和valid数据集划分好写入文件"""
     targets, sentences = [], []
-    with open(os.path.join(args.ROOT_DIR, args.RAW_SOURCE_DATA), 'r', encoding='utf-8') as fr_1, \
-            open(os.path.join(args.ROOT_DIR, args.RAW_TARGET_DATA), 'r', encoding='utf-8') as fr_2:
-        for sent, target in tqdm(zip(fr_1, fr_2), desc='text_to_id'):
-            chars = sent2char(sent)
-            label = sent2char(target)
 
-            targets.append(label)
-            sentences.append(chars)
-            if custom_vocab:
-                bulid_vocab(vocab_size, stop_word_list)
+    if user_define:
+        sentences, targets = torch.load('./data/label.pt')
+    else:
+        with open(os.path.join(args.ROOT_DIR, args.RAW_SOURCE_DATA), 'r', encoding='utf-8') as fr_1, \
+                open(os.path.join(args.ROOT_DIR, args.RAW_TARGET_DATA), 'r', encoding='utf-8') as fr_2:
+            for sent, target in tqdm(zip(fr_1, fr_2), desc='text_to_id'):
+                chars = sent2char(sent)
+                label = sent2char(target)
+
+                targets.append(label)
+                sentences.append(chars)
+                if custom_vocab:
+                    bulid_vocab(vocab_size, stop_word_list)
+
     train, valid = train_val_split(sentences, targets)
 
     with open(args.TRAIN, 'w', encoding='utf-8') as fw:
         for sent, label in tqdm(train):
-            sent = ' '.join([str(w) for w in sent])
-            label = ' '.join([str(l) for l in label])
             df = {"source": sent, "target": label}
             encode_json = json.dumps(df)
             print(encode_json, file=fw)
@@ -112,8 +116,6 @@ def produce_data(custom_vocab=False, stop_word_list=None, vocab_size=None):
 
     with open(args.VALID, 'w', encoding='utf-8') as fw:
         for sent, label in tqdm(valid):
-            sent = ' '.join([str(w) for w in sent])
-            label = ' '.join([str(l) for l in label])
             df = {"source": sent, "target": label}
             encode_json = json.dumps(df)
             print(encode_json, file=fw)
@@ -179,7 +181,7 @@ class MyPro(DataProcessor):
             line = json.loads(line)
             text_a = line["source"]
             label = line["target"]
-            assert len(label.split()) == len(text_a.split())
+            assert len(label) == len(text_a)
             example = InputExample(guid=guid, text_a=text_a, label=label)
             examples.append(example)
         return examples
@@ -213,7 +215,7 @@ def convert_examples_to_features(examples, label_list, max_seq_length, tokenizer
     features = []
     for ex_index, example in enumerate(tqdm(examples)):
         tokens_a = tokenizer.tokenize(example.text_a)
-        labels = example.label.split()
+        labels = example.label
 
         if len(tokens_a) == 0 or len(labels) == 0:
             continue
@@ -244,7 +246,8 @@ def convert_examples_to_features(examples, label_list, max_seq_length, tokenizer
         ## Notes: label_id中不包括[CLS]和[SEP]
         label_id = [label_map[l] for l in labels]
         label_padding = [-1] * (max_seq_length - len(label_id))
-        label_id += label_padding
+        # label_id += label_padding
+        label_id = [-1] + label_id + label_padding[:-1]
 
         ## output_mask用来过滤bert输出中sub_word的输出,只保留单词的第一个输出(As recommended by jocob in his paper)
         ## 此外，也是为了适应crf
