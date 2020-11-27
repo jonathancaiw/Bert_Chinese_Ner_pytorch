@@ -92,5 +92,23 @@ def generate_dataset(filename):
     torch.save((x, y), 'data/label.pt')
 
 
+def load_vocab(filename):
+    """
+    加载字符索引映射字典
+    :param filename:
+    :return:
+    """
+    char_to_index = {}
+
+    with open(filename, 'r', encoding='UTF-8') as file:
+        lines = file.readlines()
+        for line in lines:
+            char = line.strip()
+            assert char not in char_to_index
+            char_to_index[char] = len(char_to_index)
+
+    return char_to_index
+
+
 if __name__ == '__main__':
     generate_dataset('./data/label.txt')

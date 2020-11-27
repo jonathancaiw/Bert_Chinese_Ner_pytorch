@@ -33,6 +33,5 @@ seed = 2018
 gradient_accumulation_steps = 1
 fp16 = False
 loss_scale = 0.
-labels = ["B_PER", "I_PER", "B_T", "I_T", "B_ORG", "I_ORG", "B_LOC", "I_LOC", "O"]
-# labels = ["B-ORG-OWNER", "I-ORG-OWNER", "B-ORG-AGENT", "I-ORG-AGENT", "B-ORG-VENDOR", "I-ORG-VENDOR", "O"]
+labels = ["B-ORG-OWNER", "I-ORG-OWNER", "B-ORG-AGENT", "I-ORG-AGENT", "B-ORG-VENDOR", "I-ORG-VENDOR", "O"]
 device = "cuda:0"

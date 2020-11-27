@@ -2,13 +2,18 @@ import os
 import json
 import random
 from collections import Counter
-import torch
-from tqdm import tqdm
+import sys
 from util.Logginger import init_logger
-import config.args as args
 import operator
 
+sys.path.append("..")
+from data import *
+
 logger = init_logger("bert_ner", logging_path=args.log_path)
+
+vocab = load_vocab(args.ROOT_DIR + '/model/vocab.txt')
+# 特殊字符映射
+SPECIAL_TOKENS = {' ': '[unused1]', '　': '[unused1]'}
 
 
 def train_val_split(X, y, valid_size=0.2, random_state=2018, shuffle=True):
@@ -214,7 +219,8 @@ def convert_examples_to_features(examples, label_list, max_seq_length, tokenizer
 
     features = []
     for ex_index, example in enumerate(tqdm(examples)):
-        tokens_a = tokenizer.tokenize(example.text_a)
+        # tokens_a2 = tokenizer.tokenize(example.text_a)
+        tokens_a = get_tokens(example.text_a)
         labels = example.label
 
         if len(tokens_a) == 0 or len(labels) == 0:
@@ -284,3 +290,17 @@ def convert_examples_to_features(examples, label_list, max_seq_length, tokenizer
         features.append(feature)
 
     return features
+
+
+def get_tokens(text):
+    tokens = []
+    for char in text:
+        if char in vocab:
+            tokens.append(char)
+        else:
+            if char in SPECIAL_TOKENS:
+                tokens.append(SPECIAL_TOKENS[char])
+            else:
+                tokens.append('[UNK]')
+
+    return tokens
