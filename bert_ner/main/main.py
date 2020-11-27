@@ -7,7 +7,7 @@ import config.args as args
 from util.porgress_util import ProgressBar
 from preprocessing.data_processor import produce_data
 
-USER_DEFINE = False
+USER_DEFINE = True
 
 
 def start():

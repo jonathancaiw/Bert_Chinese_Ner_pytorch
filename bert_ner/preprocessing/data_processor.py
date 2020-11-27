@@ -294,6 +294,7 @@ def convert_examples_to_features(examples, label_list, max_seq_length, tokenizer
 
 def get_tokens(text):
     tokens = []
+
     for char in text:
         if char in vocab:
             tokens.append(char)
